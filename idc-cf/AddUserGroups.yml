@@ -1,0 +1,38 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to create IAM Identity Center Groups
+
+Parameters:
+  IdentityStoreId:
+    Type: String
+    Description: The ID of the Identity Store associated with IAM Identity Center
+    AllowedPattern: d-[a-zA-Z0-9]{10}
+
+Resources:
+  # InfraAdmin Group
+  InfraAdminGroup:
+    Type: AWS::IdentityStore::Group
+    Properties:
+      IdentityStoreId: !Ref IdentityStoreId
+      DisplayName: InfraAdmin
+      Description: Infrastructure administrators with full AWS access
+
+  # InfraReadOnly Group
+  InfraReadOnlyGroup:
+    Type: AWS::IdentityStore::Group
+    Properties:
+      IdentityStoreId: !Ref IdentityStoreId
+      DisplayName: InfraReadOnly
+      Description: Infrastructure read-only access
+
+Outputs:
+  InfraAdminGroupId:
+    Description: ID of the InfraAdmin Group
+    Value: !GetAtt InfraAdminGroup.GroupId
+    Export:
+      Name: !Sub ${AWS::StackName}-InfraAdminGroupId
+
+  InfraReadOnlyGroupId:
+    Description: ID of the InfraReadOnly Group
+    Value: !GetAtt InfraReadOnlyGroup.GroupId
+    Export:
+      Name: !Sub ${AWS::StackName}-InfraReadOnlyGroupId

@@ -1,0 +1,230 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to create IAM Identity Center Users and assign them to Groups using Custom Resource
+
+Parameters:
+  IdentityStoreId:
+    Type: String
+    Description: The ID of the Identity Store associated with IAM Identity Center
+    AllowedPattern: d-[a-zA-Z0-9]{10}
+
+  # User 1 Parameters
+  User1UserName:
+    Type: String
+    Description: Username for User 1
+
+  User1FirstName:
+    Type: String
+    Description: First name for User 1
+
+  User1LastName:
+    Type: String
+    Description: Last name for User 1
+
+  User1Email:
+    Type: String
+    Description: Email for User 1
+
+  User1GroupId:
+    Type: String
+    Description: Group ID to assign User 1 to
+
+  # User 2 Parameters
+  User2UserName:
+    Type: String
+    Description: Username for User 2
+
+  User2FirstName:
+    Type: String
+    Description: First name for User 2
+
+  User2LastName:
+    Type: String
+    Description: Last name for User 2
+
+  User2Email:
+    Type: String
+    Description: Email for User 2
+
+  User2GroupId:
+    Type: String
+    Description: Group ID to assign User 2 to
+
+Resources:
+  # IAM Role for Lambda
+  IdentityStoreLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-IdentityStoreLambdaRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: IdentityStoreAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - identitystore:CreateUser
+                  - identitystore:DeleteUser
+                  - identitystore:DescribeUser
+                  - identitystore:ListUsers
+                  - identitystore:CreateGroupMembership
+                  - identitystore:DeleteGroupMembership
+                  - identitystore:ListGroupMemberships
+                  - identitystore:GetGroupMembershipId
+                Resource: '*'
+
+  # Lambda Function for User Management
+  IdentityStoreUserFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-IdentityStoreUser
+      Runtime: python3.11
+      Handler: index.handler
+      Role: !GetAtt IdentityStoreLambdaRole.Arn
+      Timeout: 120
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import logging
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def handler(event, context):
+              logger.info(f"Event: {event}")
+              
+              try:
+                  identity_store = boto3.client('identitystore')
+                  
+                  request_type = event['RequestType']
+                  props = event['ResourceProperties']
+                  
+                  identity_store_id = props['IdentityStoreId']
+                  user_name = props['UserName']
+                  first_name = props['FirstName']
+                  last_name = props['LastName']
+                  email = props['Email']
+                  group_id = props.get('GroupId')
+                  
+                  if request_type == 'Create':
+                      # Create user
+                      response = identity_store.create_user(
+                          IdentityStoreId=identity_store_id,
+                          UserName=user_name,
+                          Name={
+                              'GivenName': first_name,
+                              'FamilyName': last_name
+                          },
+                          DisplayName=f"{first_name} {last_name}",
+                          Emails=[
+                              {
+                                  'Value': email,
+                                  'Type': 'work',
+                                  'Primary': True
+                              }
+                          ]
+                      )
+                      user_id = response['UserId']
+                      logger.info(f"Created user: {user_id}")
+                      
+                      # Add to group if specified
+                      membership_id = None
+                      if group_id:
+                          membership_response = identity_store.create_group_membership(
+                              IdentityStoreId=identity_store_id,
+                              GroupId=group_id,
+                              MemberId={'UserId': user_id}
+                          )
+                          membership_id = membership_response['MembershipId']
+                          logger.info(f"Created membership: {membership_id}")
+                      
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {
+                          'UserId': user_id,
+                          'MembershipId': membership_id or 'N/A'
+                      }, user_id)
+                  
+                  elif request_type == 'Delete':
+                      user_id = event['PhysicalResourceId']
+                      
+                      # Delete group membership first
+                      if group_id:
+                          try:
+                              membership_id = identity_store.get_group_membership_id(
+                                  IdentityStoreId=identity_store_id,
+                                  GroupId=group_id,
+                                  MemberId={'UserId': user_id}
+                              )['MembershipId']
+                              
+                              identity_store.delete_group_membership(
+                                  IdentityStoreId=identity_store_id,
+                                  MembershipId=membership_id
+                              )
+                              logger.info(f"Deleted membership: {membership_id}")
+                          except Exception as e:
+                              logger.warning(f"Could not delete membership: {e}")
+                      
+                      # Delete user
+                      try:
+                          identity_store.delete_user(
+                              IdentityStoreId=identity_store_id,
+                              UserId=user_id
+                          )
+                          logger.info(f"Deleted user: {user_id}")
+                      except Exception as e:
+                          logger.warning(f"Could not delete user: {e}")
+                      
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, user_id)
+                  
+                  elif request_type == 'Update':
+                      # For updates, we just return success with existing ID
+                      user_id = event['PhysicalResourceId']
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {
+                          'UserId': user_id
+                      }, user_id)
+              
+              except Exception as e:
+                  logger.error(f"Error: {e}")
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {'Error': str(e)})
+
+  # User 1
+  User1:
+    Type: Custom::IdentityStoreUser
+    Properties:
+      ServiceToken: !GetAtt IdentityStoreUserFunction.Arn
+      IdentityStoreId: !Ref IdentityStoreId
+      UserName: !Ref User1UserName
+      FirstName: !Ref User1FirstName
+      LastName: !Ref User1LastName
+      Email: !Ref User1Email
+      GroupId: !Ref User1GroupId
+
+  # User 2
+  User2:
+    Type: Custom::IdentityStoreUser
+    DependsOn: User1
+    Properties:
+      ServiceToken: !GetAtt IdentityStoreUserFunction.Arn
+      IdentityStoreId: !Ref IdentityStoreId
+      UserName: !Ref User2UserName
+      FirstName: !Ref User2FirstName
+      LastName: !Ref User2LastName
+      Email: !Ref User2Email
+      GroupId: !Ref User2GroupId
+
+Outputs:
+  User1Id:
+    Description: ID of User 1
+    Value: !GetAtt User1.UserId
+
+  User2Id:
+    Description: ID of User 2
+    Value: !GetAtt User2.UserId

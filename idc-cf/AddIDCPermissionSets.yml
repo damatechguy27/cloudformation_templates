@@ -1,0 +1,137 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to create IAM Identity Center Permission Sets
+
+Parameters:
+  InstanceArn:
+    Type: String
+    Description: The ARN of the IAM Identity Center instance
+    AllowedPattern: arn:aws:sso:::instance/ssoins-[a-zA-Z0-9]{16}
+
+  SessionDurationHours:
+    Type: Number
+    Description: Session duration in hours
+    Default: 8
+    MinValue: 1
+    MaxValue: 12
+
+Resources:
+  # Administrator Access - Full AWS access
+  AdministratorAccessPermissionSet:
+    Type: AWS::SSO::PermissionSet
+    Properties:
+      Name: AdministratorAccess
+      Description: Provides full access to AWS services and resources
+      InstanceArn: !Ref InstanceArn
+      SessionDuration: !Sub PT${SessionDurationHours}H
+      ManagedPolicies:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+      Tags:
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  # Power User Access - Full access except IAM/Organizations
+  PowerUserAccessPermissionSet:
+    Type: AWS::SSO::PermissionSet
+    Properties:
+      Name: PowerUserAccess
+      Description: Provides full access except IAM and Organizations
+      InstanceArn: !Ref InstanceArn
+      SessionDuration: !Sub PT${SessionDurationHours}H
+      ManagedPolicies:
+        - arn:aws:iam::aws:policy/PowerUserAccess
+      Tags:
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  # System Administrator - Systems management access
+  SystemAdministratorPermissionSet:
+    Type: AWS::SSO::PermissionSet
+    Properties:
+      Name: SystemAdministrator
+      Description: Provides access for system administration tasks
+      InstanceArn: !Ref InstanceArn
+      SessionDuration: !Sub PT${SessionDurationHours}H
+      ManagedPolicies:
+        - arn:aws:iam::aws:policy/job-function/SystemAdministrator
+      Tags:
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  # Security Audit - Security auditing access
+  SecurityAuditPermissionSet:
+    Type: AWS::SSO::PermissionSet
+    Properties:
+      Name: SecurityAudit
+      Description: Provides access for security auditing
+      InstanceArn: !Ref InstanceArn
+      SessionDuration: !Sub PT${SessionDurationHours}H
+      ManagedPolicies:
+        - arn:aws:iam::aws:policy/SecurityAudit
+      Tags:
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  # Read Only Access - Read-only access to all resources
+  ReadOnlyAccessPermissionSet:
+    Type: AWS::SSO::PermissionSet
+    Properties:
+      Name: ReadOnlyAccess
+      Description: Provides read-only access to AWS services and resources
+      InstanceArn: !Ref InstanceArn
+      SessionDuration: !Sub PT${SessionDurationHours}H
+      ManagedPolicies:
+        - arn:aws:iam::aws:policy/ReadOnlyAccess
+      Tags:
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  # View Only Access - More restricted view-only access
+  ViewOnlyAccessPermissionSet:
+    Type: AWS::SSO::PermissionSet
+    Properties:
+      Name: ViewOnlyAccess
+      Description: Provides view-only access to AWS services
+      InstanceArn: !Ref InstanceArn
+      SessionDuration: !Sub PT${SessionDurationHours}H
+      ManagedPolicies:
+        - arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+      Tags:
+        - Key: ManagedBy
+          Value: CloudFormation
+
+Outputs:
+  AdministratorAccessPermissionSetArn:
+    Description: ARN of the AdministratorAccess Permission Set
+    Value: !GetAtt AdministratorAccessPermissionSet.PermissionSetArn
+    Export:
+      Name: !Sub ${AWS::StackName}-AdministratorAccessPermissionSetArn
+
+  PowerUserAccessPermissionSetArn:
+    Description: ARN of the PowerUserAccess Permission Set
+    Value: !GetAtt PowerUserAccessPermissionSet.PermissionSetArn
+    Export:
+      Name: !Sub ${AWS::StackName}-PowerUserAccessPermissionSetArn
+
+  SystemAdministratorPermissionSetArn:
+    Description: ARN of the SystemAdministrator Permission Set
+    Value: !GetAtt SystemAdministratorPermissionSet.PermissionSetArn
+    Export:
+      Name: !Sub ${AWS::StackName}-SystemAdministratorPermissionSetArn
+
+  SecurityAuditPermissionSetArn:
+    Description: ARN of the SecurityAudit Permission Set
+    Value: !GetAtt SecurityAuditPermissionSet.PermissionSetArn
+    Export:
+      Name: !Sub ${AWS::StackName}-SecurityAuditPermissionSetArn
+
+  ReadOnlyAccessPermissionSetArn:
+    Description: ARN of the ReadOnlyAccess Permission Set
+    Value: !GetAtt ReadOnlyAccessPermissionSet.PermissionSetArn
+    Export:
+      Name: !Sub ${AWS::StackName}-ReadOnlyAccessPermissionSetArn
+
+  ViewOnlyAccessPermissionSetArn:
+    Description: ARN of the ViewOnlyAccess Permission Set
+    Value: !GetAtt ViewOnlyAccessPermissionSet.PermissionSetArn
+    Export:
+      Name: !Sub ${AWS::StackName}-ViewOnlyAccessPermissionSetArn
