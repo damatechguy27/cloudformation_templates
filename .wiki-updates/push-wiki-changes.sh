@@ -12,9 +12,8 @@ git status
 
 echo ""
 echo "Attempting to push to origin/master..."
-git push origin master
 
-if [ $? -eq 0 ]; then
+if git push origin master; then
     echo "✓ Wiki changes successfully pushed to GitHub!"
     echo "✓ The IAM-Engineering-Project wiki page is now updated with:"
     echo "  - Purpose explanation"
