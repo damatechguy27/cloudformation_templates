@@ -187,10 +187,21 @@ aws cloudformation create-stack \
 
 Deploy the templates in this order to ensure dependencies are satisfied:
 
-```
-1. AddIDCPermissionSets.yml  →  Creates Permission Sets
-2. AddUserGroups.yml         →  Creates Groups
-3. AddingUsersAssignments.yml →  Creates Users (requires Group IDs from step 2)
+```mermaid
+flowchart LR
+    A["1️⃣ AddIDCPermissionSets.yml"] --> B["2️⃣ AddUserGroups.yml"]
+    B --> C["3️⃣ AddingUsersAssignments.yml"]
+    
+    A -.- A1["Creates Permission Sets"]
+    B -.- B1["Creates Groups"]
+    C -.- C1["Creates Users<br/>(requires Group IDs)"]
+    
+    style A fill:#2E86AB,color:#fff
+    style B fill:#A23B72,color:#fff
+    style C fill:#F18F01,color:#fff
+    style A1 fill:#E8E8E8,color:#333
+    style B1 fill:#E8E8E8,color:#333
+    style C1 fill:#E8E8E8,color:#333
 ```
 
 ### Complete Deployment Script

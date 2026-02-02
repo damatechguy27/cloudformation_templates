@@ -29,12 +29,23 @@ The `idc-cf/` folder contains templates for deploying and managing **AWS IAM Ide
 
 ## Repository Structure
 
-```
-cloudformation_templates/
-├── README.md
-└── idc-cf/
-    ├── DEPLOYMENT_GUIDE.md          # Detailed deployment instructions
-    ├── AddIDCPermissionSets.yml     # Permission Sets template
-    ├── AddUserGroups.yml            # Groups template
-    └── AddingUsersAssignments.yml   # Users template
+```mermaid
+flowchart TB
+    subgraph repo["📁 cloudformation_templates/"]
+        README["📄 README.md"]
+        subgraph idc["📁 idc-cf/"]
+            GUIDE["📄 DEPLOYMENT_GUIDE.md<br/><i>Detailed deployment instructions</i>"]
+            PS["📄 AddIDCPermissionSets.yml<br/><i>Permission Sets template</i>"]
+            UG["📄 AddUserGroups.yml<br/><i>Groups template</i>"]
+            UA["📄 AddingUsersAssignments.yml<br/><i>Users template</i>"]
+        end
+    end
+    
+    style repo fill:#1a1a2e,color:#fff
+    style idc fill:#16213e,color:#fff
+    style README fill:#0f3460,color:#fff
+    style GUIDE fill:#e94560,color:#fff
+    style PS fill:#533483,color:#fff
+    style UG fill:#533483,color:#fff
+    style UA fill:#533483,color:#fff
 ```
